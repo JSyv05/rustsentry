@@ -1,0 +1,8 @@
+[package]
+name = "capture"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+pcap.workspace = true
+anyhow.workspace = true

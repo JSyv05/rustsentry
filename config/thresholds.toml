@@ -1,0 +1,6 @@
+# Detector thresholds — tune these during Phase 4 evaluation.
+# These starting values are rough placeholders, not researched defaults.
+
+window_secs = 10                  # sliding window size for all detectors
+syn_without_ack_threshold = 100   # SYNs without matching ACK, per dest IP, per window
+distinct_ports_threshold = 20     # distinct dest ports from one src IP, per window

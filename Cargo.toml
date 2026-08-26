@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/capture",
+    "crates/parser",
+    "crates/flow",
+    "crates/detect",
+    "crates/cli",
+]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+
+[workspace.dependencies]
+pcap = "2"
+pnet = "0.35"
+anyhow = "1"
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+chrono = "0.4"

@@ -1,0 +1,9 @@
+[package]
+name = "detect"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+parser = { path = "../parser" }
+flow = { path = "../flow" }
+serde.workspace = true

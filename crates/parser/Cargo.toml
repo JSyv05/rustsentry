@@ -1,0 +1,8 @@
+[package]
+name = "parser"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+pnet.workspace = true
+anyhow.workspace = true
