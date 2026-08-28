@@ -29,4 +29,13 @@ cap_net_raw,cap_net_admin=eip target/debug/rustsentry` on Linux, or run as
 root). Development is expected to start against replayed .pcap files instead
 — see DECISIONS.md.
 
+## AI component (advisor requirement)
+
+`crates/detect/src/ml_classifier.rs` holds the ML-based flow classifier —
+trained offline via `linfa` against a labeled NIDS dataset (CICIDS2017 /
+NSL-KDD / UNSW-NB15 — pick one), producing `Alert`s alongside the rule-based
+detectors. See `capstone-plan.md`, Phase 3 weeks 9–11, for the full plan.
+Place the raw dataset under `test-data/datasets/` (gitignored — these are
+typically large; don't commit them).
+
 Licensed under either of Apache License, Version 2.0 or MIT license at your option.
