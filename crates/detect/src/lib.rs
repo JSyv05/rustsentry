@@ -1,8 +1,8 @@
 //! Detection engine: rule-based detectors that read from flow::SlidingWindowCounters
 //! and emit Alerts. Add one module per attack pattern.
 
-pub mod syn_flood;
 pub mod port_scan;
+pub mod syn_flood;
 // pub mod icmp_flood;   // Phase 3 stretch goal
 // pub mod slowloris;    // Phase 3 stretch goal, only if time allows
 
@@ -21,6 +21,7 @@ pub enum AlertKind {
     SynFlood,
     PortScan,
     IcmpFlood,
+    MlFlagged,
 }
 
 /// Thresholds are config-driven (see config/thresholds.toml) rather than

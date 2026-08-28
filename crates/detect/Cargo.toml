@@ -7,3 +7,7 @@ version.workspace = true
 parser = { path = "../parser" }
 flow = { path = "../flow" }
 serde.workspace = true
+linfa = "0.7"
+linfa-trees = "0.7"       # decision tree — good starting point, interpretable
+linfa-logistic = "0.7"    # logistic regression — alternative starting point
+ndarray = "0.15"          # feature vectors / linfa's array type
