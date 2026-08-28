@@ -8,6 +8,7 @@ See `capstone-plan.md` (in the parent deliverables) for the full 15-week
 milestone plan, and `DECISIONS.md` for the running log of scope decisions.
 
 ## Workspace layout
+
 - `crates/capture` — live pcap capture + offline .pcap replay
 - `crates/parser` — Ethernet/IP/TCP/UDP/ICMP dissection
 - `crates/flow` — sliding-window flow tracking (shared by all detectors)
@@ -17,11 +18,15 @@ milestone plan, and `DECISIONS.md` for the running log of scope decisions.
 - `test-data/pcaps/` — sample benign + attack captures for tests/eval
 
 ## Getting started
-```
+
+``` bash
 cargo build
 cargo run --bin rustsentry
 ```
+
 Note: live capture requires elevated permissions (`sudo setcap
 cap_net_raw,cap_net_admin=eip target/debug/rustsentry` on Linux, or run as
 root). Development is expected to start against replayed .pcap files instead
 — see DECISIONS.md.
+
+Licensed under either of Apache License, Version 2.0 or MIT license at your option.
