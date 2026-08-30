@@ -25,4 +25,24 @@ pub struct LiveCapture {
 /// stages, per the capstone plan.
 pub struct PcapFileReplay {
     // file handle goes here
+    capture: pcap::Capture<pcap::Offline>
+}
+
+impl PcapFileReplay {
+    pub fn new(path: impl AsRef<std::path::Path>) -> Result<Self> {
+        Ok(Self { capture: pcap::Capture::from_file(path)? })
+    }
+}
+
+impl FrameSource for PcapFileReplay {
+    fn next_frame(&mut self) -> Result<Option<RawFrame>> {
+        match self.capture.next_packet() {
+            Ok(packet) => Ok(Some(RawFrame {
+                timestamp_micros: packet.header.ts.tv_sec * 1_000_000 +packet.header.ts.tv_usec,
+                data: packet.data.to_vec(),
+            })),
+            Err(pcap::Error::NoMorePackets) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
 }

@@ -17,6 +17,17 @@ milestone plan, and `DECISIONS.md` for the running log of scope decisions.
 - `config/thresholds.toml` — tunable detector thresholds
 - `test-data/pcaps/` — sample benign + attack captures for tests/eval
 
+## Prerequisites
+
+Building requires the libpcap development headers:
+
+- Debian/Ubuntu: `sudo apt install libpcap-dev`
+- Fedora/RHEL:   `sudo dnf install libpcap-devel`
+- macOS:         `brew install libpcap` (usually already present via Xcode CLT)
+
+(Running a prebuilt binary only needs the libpcap runtime library, which
+ships as part of most Linux distros by default.)
+
 ## Getting started
 
 ``` bash
