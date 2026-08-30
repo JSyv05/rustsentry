@@ -25,4 +25,11 @@ a paper trail since your advisor is on sabbatical during grading.
 - **Date:** 08/28/2026 Week 1
 - **Decision:** Chose Rust over languages like C and Go
 - **Why:** I want to take advantage of Rust's garbage collector to create a memory safe program will low runtime overhead.
-- **Alternatives Considered:** C - rejected, smarter memory management over manual menory management. Go  - rejected, Rust's garbage collector has the advantage of not possibly pausing. Packets/second is an important metric for tracking the efficiency of the program.
+- **Alternatives considered:** C - rejected, smarter memory management over manual menory management. Go  - rejected, Rust's garbage collector has the advantage of not possibly pausing. Packets/second is an important metric for tracking the efficiency of the program.
+
+---
+
+- **Date:** 08/29/2026
+- **Decision:** libpcap is a documented system prerequisite, not vendored
+- **Why:** This would require building libpcap into the project, unnecessary
+- **Alternatives considered:** Vendoring libpcap - rejected, increases scope and takes away from current scope
