@@ -15,10 +15,16 @@ pub trait FrameSource {
     fn next_frame(&mut self) -> Result<Option<RawFrame>>;
 }
 
-/// TODO(week 1): implement live capture via pcap::Device::lookup() + .open()
+/// LiveCapture implements active network sniffing. The struct uses
+/// an active capture, which is used whenever you are getting packets
+/// from a running device.
+
 pub struct LiveCapture {
     capture: pcap::Capture<pcap::Active>,
 }
+
+/// Constructer checks to see if a default network device
+/// exists, and constructs if one does.
 
 impl LiveCapture {
     pub fn new() -> Result<Self> {
@@ -29,6 +35,11 @@ impl LiveCapture {
         })
     }
 }
+
+/// next_frame checks to see if there is another packet to read. If there is,
+/// then it will return the time and the data associated with the frame.
+/// if it cant capture any more packets for any reason, then the program ends,
+/// otherwise, it sends an error.
 
 impl FrameSource for LiveCapture {
     fn next_frame(&mut self) -> Result<Option<RawFrame>> {
@@ -43,14 +54,18 @@ impl FrameSource for LiveCapture {
     }
 }
 
-/// TODO(week 1): implement replay via pcap::Capture::from_file()
-/// Recommended: get this working *before* LiveCapture — it sidesteps
-/// capture-permission issues while you build out the parser/flow/detect
-/// stages, per the capstone plan.
+/// PcapFileReplay implements file reading to this project
+/// the struct uses an offline Capture, which means a .pcap file.
+/// Constructor takes a path as an argument, and constructs if the
+/// path exists.
+
 pub struct PcapFileReplay {
     // file handle goes here
     capture: pcap::Capture<pcap::Offline>,
 }
+
+/// Constructor takes a path as an argument, and constructs if the
+/// path exists.
 
 impl PcapFileReplay {
     pub fn new(path: impl AsRef<std::path::Path>) -> Result<Self> {
@@ -59,6 +74,11 @@ impl PcapFileReplay {
         })
     }
 }
+
+/// next_frame checks to see if there is another packet to read. If there is,
+/// then it will return the time and the data associated with the frame.
+/// if there are no more frames in the .pcap file, then the program ends,
+/// otherwise, it sends an error.
 
 impl FrameSource for PcapFileReplay {
     fn next_frame(&mut self) -> Result<Option<RawFrame>> {
