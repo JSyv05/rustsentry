@@ -3,6 +3,9 @@
 
 use std::net::IpAddr;
 
+use pnet::packet::ethernet::EtherTypes;
+use pnet::packet::ethernet::EthernetPacket;
+
 #[derive(Debug, Clone)]
 pub struct PacketSummary {
     pub timestamp_micros: i64,
@@ -33,6 +36,16 @@ pub struct TcpFlags {
 
 /// TODO(week 2): parse Ethernet -> IPv4/IPv6 -> TCP/UDP/ICMP using pnet's
 /// packet types (EthernetPacket, Ipv4Packet, TcpPacket, etc).
-pub fn parse_frame(_raw: &[u8]) -> Option<PacketSummary> {
-    todo!("Ethernet/IP/TCP/UDP/ICMP dissection — week 2")
+pub fn parse_frame(_raw: &[u8], _timestamp_micros: i64) -> Option<PacketSummary> {
+    //todo!("Ethernet/IP/TCP/UDP/ICMP dissection — week 2");
+    let ethernet_packet = EthernetPacket::new(_raw)?;
+    match ethernet_packet.get_ethertype() {
+        EtherTypes::Ipv4 => {
+            todo!("Ipv4 branching");
+        }
+
+        EtherTypes::Ipv6 => None, // Not handling this yet, valid Option<PacketSummary>
+
+        _ => None, // anything else: skip
+    }
 }
