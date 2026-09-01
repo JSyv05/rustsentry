@@ -37,13 +37,6 @@ a paper trail since your advisor is on sabbatical during grading.
 ---
 
 - **Date:** Week 1 08/31/2026
-- **Decision:** Build ML using PyTorch
-- **Why:** I already have prior knowledge using PyTorch
-- **Alternatives considered:** Finding a preexisting model: rejected, takes away from making my project unique. Finding a neural net trainer in Rust: rejected, would rather work in something I am already confortable in, and there is strong support for this approach. 
-
----
-
-- **Date:** Week 1 08/31/2026
 - **Decision:** Have the program run as a daemon
 - **Why:** For a NIDS to work effectively, it need to constantly run
 - **Alternatives considered:** Run as user software: rejected, makes more practical sense to run constantly.
