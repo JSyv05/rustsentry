@@ -41,6 +41,8 @@
 | 7 | **Port scan detector**: track distinct destination ports contacted by one source IP over a window; alert on threshold breach. |
 | 8 | **Milestone 2 checkpoint.** Both detectors running against replayed pcaps of known attack traffic (see Phase 4 for how to generate these) with alerts logged. This is your "minimum defensible capstone" — if everything after this slips, you still have a complete, demoable project. |
 
+**Daemon mode (deferred — see DECISIONS.md):** running continuously (rather than one-shot pcap replay) is decided scope, but not implemented yet — it needs flow tracking (Week 3) to exist first. Packet *rate*, not packet size, drives per-packet cost, and the current design already keeps expensive work (threshold/ML checks) off the per-packet path by running it periodically over the flow table instead. The piece that still needs building before this ships: eviction of stale flow entries from the flow table (unbounded growth is the real long-running risk, not per-packet CPU), signal handling for clean shutdown, and file/syslog logging instead of stdout. None of this is exercised by a one-shot pcap-replay demo.
+
 ---
 
 ## Phase 3 — Stretch features (Weeks 9–12)
