@@ -5,7 +5,8 @@ files) and flags DoS-style attack patterns — SYN floods, port scans, and
 (stretch goal) ICMP floods — using flow-based sliding-window detection.
 
 See `capstone-plan.md` (in the parent deliverables) for the full 15-week
-milestone plan, and `DECISIONS.md` for the running log of scope decisions.
+milestone plan, `evaluation-methodology.md` for how detection performance is
+measured, and `DECISIONS.md` for the running log of scope decisions.
 
 ## Workspace layout
 

@@ -64,3 +64,17 @@ a paper trail since your advisor is on sabbatical during grading.
   unbounded memory growth on a real long-running deployment.
 
 ---
+
+- **Date:** 09/04/2026
+- **Decision:** Advisor approved the project proposal (scope and milestones
+  as described in `capstone-plan.md`) — Week 1 sign-off checkpoint complete.
+  Note: this covers the proposal specifically; the evaluation methodology
+  (Week 2 sign-off checkpoint, see `evaluation-methodology.md`) is a
+  separate approval, still to be confirmed.
+- **Why:** The plan calls for written sign-off on the proposal while the
+  advisor is still available this semester, ahead of sabbatical, so scope
+  can't later be disputed with no one to arbitrate.
+- **Alternatives considered:** N/A — this is a sign-off record, not a scope
+  decision.
+
+---

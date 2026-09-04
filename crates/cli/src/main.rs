@@ -11,6 +11,13 @@ fn main() -> anyhow::Result<()> {
     let mut replay = PcapFileReplay::new("test-data/pcaps/4SICS-GeekLounge-151020.pcap")?;
     while let Some(frame) = replay.next_frame()? {
         println!("{} bytes", frame.data.len());
+
+        if let Some(summary) = parser::parse_frame(&frame.data, frame.timestamp_micros) {
+            println!(
+                "{} -> {}, {:?}",
+                summary.src_ip, summary.dst_ip, summary.protocol
+            );
+        }
     }
 
     // TODO(week 2): parse::parse_frame() each raw frame
