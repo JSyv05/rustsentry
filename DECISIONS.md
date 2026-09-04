@@ -42,3 +42,39 @@ a paper trail since your advisor is on sabbatical during grading.
 - **Alternatives considered:** Run as user software: rejected, makes more practical sense to run constantly.
 
 ---
+
+- **Date:** 09/01/2026
+- **Decision:** Daemon-mode implementation (flow-table eviction, signal
+  handling, file/syslog logging) is deferred until flow tracking exists
+  (Week 3+); not building it during Week 1.
+- **Why:** Looked into CPU/memory risk for long-running operation. Packet
+  size doesn't drive per-packet cost — packet *rate* does, and smaller
+  average packet size means a *higher* rate at a given bandwidth (the
+  4SICS test capture averages 88 bytes/packet, which is on the small
+  side). The existing design already keeps expensive work off the
+  per-packet path: parsing/flow-update is cheap per packet, while
+  threshold/ML checks run periodically over the flow table, so cost
+  scales with active-flow count, not raw packets/sec. The real
+  long-running risk is unbounded growth of the flow `HashMap` if stale
+  flows are never evicted — something a one-shot pcap-replay demo never
+  surfaces, since the process just exits when the file ends.
+- **Alternatives considered:** Building eviction/signal-handling/logging
+  now: rejected, flow tracking (Week 3) doesn't exist yet so there's
+  nothing to prune. Ignoring eviction entirely: rejected, would cause
+  unbounded memory growth on a real long-running deployment.
+
+---
+
+- **Date:** 09/04/2026
+- **Decision:** Advisor approved the project proposal (scope and milestones
+  as described in `capstone-plan.md`) — Week 1 sign-off checkpoint complete.
+  Note: this covers the proposal specifically; the evaluation methodology
+  (Week 2 sign-off checkpoint, see `evaluation-methodology.md`) is a
+  separate approval, still to be confirmed.
+- **Why:** The plan calls for written sign-off on the proposal while the
+  advisor is still available this semester, ahead of sabbatical, so scope
+  can't later be disputed with no one to arbitrate.
+- **Alternatives considered:** N/A — this is a sign-off record, not a scope
+  decision.
+
+---
