@@ -64,6 +64,8 @@ Pick based on how Phase 2 went. Suggested priority order (do them top-down, stop
 | 3 | **Adaptive/statistical detection** (EWMA or z-score baselining instead of fixed thresholds) | Good secondary comparison point once the ML classifier exists — "rule-based vs. statistical vs. ML" is a nice three-way evaluation table. |
 | 4 | **Third attack pattern** (ICMP flood or basic DNS amplification signal) | Straightforward extension of Phase 2 infrastructure once it exists. |
 | 5 | **Slowloris-style detection** (long-lived low-rate connections) | Hardest — needs connection-lifecycle tracking over minutes, not just packet-rate windows. Only attempt if everything above finished early. |
+| 6 | **ARP spoofing detection** — alert when an IP address's ARP-advertised MAC address changes within a window (classic cache-poisoning/MITM signature) | Needs new `parser` work first: ARP frames are currently dropped (non-IP ethertypes return `None`), so this needs an ARP dissector plus IP-to-MAC binding tracking before the detector itself can run. |
+| 7 | **DNS tunneling detection** — alert on abnormal DNS query volume or query-name length per source IP within a window (classic data-exfiltration-via-DNS signature) | Needs new `parser` work too: today's UDP parsing only records `payload_len`, not DNS message contents — this needs actual DNS query parsing, not just flow-level counters. |
 
 ### ML classifier sub-plan (Weeks 9–11)
 

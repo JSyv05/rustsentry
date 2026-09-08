@@ -78,3 +78,36 @@ a paper trail since your advisor is on sabbatical during grading.
   decision.
 
 ---
+
+- **Date:** 09/07/2026
+- **Decision:** Added ARP spoofing and DNS tunneling detection as Phase 3
+  backlog items, priorities 6 and 7 in `capstone-plan.md` (below the ML
+  classifier, TUI, adaptive detection, and Slowloris) — stubbed as
+  `crates/detect/src/arp_spoof.rs` and `dns_tunneling.rs`, matching the
+  `syn_flood.rs`/`port_scan.rs` pattern. Not committed to building either;
+  logging this now so the idea and its cost are on record.
+- **Why:** Reviewed for scope bloat before adding. Cost today is ~zero —
+  two backlog rows, two `todo!()` stub files, no new dependencies, nothing
+  wired into `main.rs`'s detection loop — and their position at the bottom
+  of an already-optional, top-down backlog (below Slowloris, which the plan
+  already flags as "only attempt if everything above finished early") means
+  they're unlikely to be reached at all within 15 weeks. If they ever are
+  built, they're heavier than the other backlog items: both need new
+  `parser` dissection work (ARP frames are dropped entirely today; DNS
+  query contents aren't parsed at all), and ARP spoofing needs IP-to-MAC
+  binding history that doesn't fit `flow::SlidingWindowCounters`'s
+  per-flow model. Design call for whenever this is picked up: give ARP/DNS
+  their own purpose-built types and parsing functions rather than bolting
+  new optional fields onto `PacketSummary` — keeps it scoped to what it
+  already represents and leaves the existing, tested TCP/UDP/ICMP parsing
+  code untouched, at the cost of the two stub `check()` signatures needing
+  to change (already known to be provisional; nothing calls them yet, so
+  free to change later).
+- **Alternatives considered:** Extending `PacketSummary` with ARP/DNS
+  fields directly: rejected for whenever implementation happens — turns a
+  scoped "IP packet summary" into a grab-bag of every protocol's leftover
+  fields, and forces edits to all four existing struct-literal sites for
+  fields most of them don't use. Not adding these to the plan at all:
+  rejected, cost of recording the idea now is effectively zero.
+
+---
