@@ -31,7 +31,6 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    // TODO(week 3): feed PacketSummary into flow::SlidingWindowCounters
     // TODO(week 6-7): run detect::syn_flood::check() / port_scan::check()
     //                 on a timer and print any Alerts
 
