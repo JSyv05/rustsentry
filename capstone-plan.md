@@ -66,6 +66,7 @@ Pick based on how Phase 2 went. Suggested priority order (do them top-down, stop
 | 5 | **Slowloris-style detection** (long-lived low-rate connections) | Hardest — needs connection-lifecycle tracking over minutes, not just packet-rate windows. Only attempt if everything above finished early. |
 | 6 | **ARP spoofing detection** — alert when an IP address's ARP-advertised MAC address changes within a window (classic cache-poisoning/MITM signature) | Needs new `parser` work first: ARP frames are currently dropped (non-IP ethertypes return `None`), so this needs an ARP dissector plus IP-to-MAC binding tracking before the detector itself can run. |
 | 7 | **DNS tunneling detection** — alert on abnormal DNS query volume or query-name length per source IP within a window (classic data-exfiltration-via-DNS signature) | Needs new `parser` work too: today's UDP parsing only records `payload_len`, not DNS message contents — this needs actual DNS query parsing, not just flow-level counters. |
+| 8 | **DHCP starvation detection** — alert when one source rapidly cycles through many distinct client MAC addresses issuing DHCPDISCOVER/DHCPREQUEST within a window (classic address-pool-exhaustion DoS signature) | Needs new `parser` work (DHCP/BOOTP message parsing on top of UDP) plus MAC-keyed state, same as ARP spoofing — `flow::SlidingWindowCounters`'s IP-keyed model doesn't identify a DHCPDISCOVER client, which sends from 0.0.0.0. |
 
 ### ML classifier sub-plan (Weeks 9–11)
 

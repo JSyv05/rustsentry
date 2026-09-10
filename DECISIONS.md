@@ -111,3 +111,35 @@ a paper trail since your advisor is on sabbatical during grading.
   rejected, cost of recording the idea now is effectively zero.
 
 ---
+
+- **Date:** 09/08/2026
+- **Decision:** Added DHCP starvation detection as a Phase 3 backlog item,
+  priority 8 in `capstone-plan.md` (below ARP spoofing and DNS tunneling) —
+  stubbed as `crates/detect/src/dhcp_starvation.rs`, same pattern as the
+  other backlog detectors. Did **not** add brute-force detection, which was
+  considered alongside it.
+- **Why:** DHCP starvation cleared the same bar ARP/DNS did: it's DoS-style
+  (pool exhaustion denies service to legitimate clients), fits the existing
+  flow/threshold detection paradigm, and costs ~zero to log now — a backlog
+  row and a `todo!()` stub, nothing wired into `main.rs`. Like ARP spoofing,
+  it will need new `parser` work (DHCP/BOOTP message parsing over UDP) and
+  MAC-keyed state that `flow::SlidingWindowCounters` doesn't have today,
+  since a DHCPDISCOVER is sent from 0.0.0.0 and isn't identifiable by its
+  IP-based flow key.
+- **Alternatives considered:** Brute-force detection (e.g. repeated failed
+  SSH/FTP/HTTP auth) — rejected, at least for now. Two reasons, different
+  in kind from the ARP/DNS cost-benefit above: (1) it isn't a DoS attack,
+  and `capstone-plan.md`'s scope line (which the advisor's 09/04 sign-off
+  covers) specifically defines this project as detecting "DoS-style attack
+  patterns" — adding it would redefine the thesis, not just extend the
+  backlog under it, and that warrants asking the advisor directly rather
+  than logging it unilaterally. (2) it doesn't fit the existing detection
+  shape the way ARP/DNS/DHCP do: real brute-force detection needs app-layer
+  parsing of auth failure responses, generally a separate parser per
+  targeted protocol (SSH, FTP, HTTP, RDP, ...), not one more UDP-based
+  message format like DNS/DHCP. A cheap proxy (many short connections to
+  one port from one source) is really just port-scan detection aimed at a
+  single port, not a real brute-force signature, so it wasn't worth stubbing
+  as one.
+
+---
