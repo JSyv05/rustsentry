@@ -2,17 +2,27 @@
 //! prints/logs alerts. Week 1 goal: this compiles and runs, even if every
 //! stage below it is still a todo!().
 
-use capture::{FrameSource, PcapFileReplay};
+use capture::{FrameSource, LiveCapture, PcapFileReplay};
 use flow::{FlowKey, SlidingWindowCounters};
 
 fn main() -> anyhow::Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+
+    let dump_interval_micros: i64 = 5_000_000; // 5s, based on packet time. to be controlled by config
+    let mut next_dump_micros: Option<i64> = None;
+
+    let mut source: Box<dyn FrameSource> = match args.get(1).map(String::as_str) {
+        Some("--live") => Box::new(LiveCapture::new()?),
+        Some("--live=eth2") => Box::new(LiveCapture::on_device("eth2")?),
+        Some(path) => Box::new(PcapFileReplay::new(path)?),
+        None => Box::new(PcapFileReplay::new(
+            "test-data/pcaps/4SICS-GeekLounge-151020.pcap",
+        )?),
+    };
     println!("rustsentry starting up (scaffold — pipeline not yet implemented)");
 
-    let mut replay = PcapFileReplay::new("test-data/pcaps/4SICS-GeekLounge-151020.pcap")?;
     let mut counters = SlidingWindowCounters::new(10); // TODO! use config/threshold.toml for config
-    while let Some(frame) = replay.next_frame()? {
-        println!("{} bytes", frame.data.len());
-
+    while let Some(frame) = source.next_frame()? {
         if let Some(summary) = parser::parse_frame(&frame.data, frame.timestamp_micros) {
             let key = FlowKey {
                 src_ip: summary.src_ip,
@@ -22,12 +32,25 @@ fn main() -> anyhow::Result<()> {
 
             counters.record(key, &summary);
 
-            println!(
-                "{} -> {}, {:?}",
-                summary.src_ip, summary.dst_ip, summary.protocol
-            );
-
-            println!("{} flows tracked", counters.flow_count());
+            let due =
+                *next_dump_micros.get_or_insert(summary.timestamp_micros + dump_interval_micros);
+            if summary.timestamp_micros >= due {
+                println!("--- flow table @ {} ---", summary.timestamp_micros);
+                for flow in counters.flows() {
+                    println!(
+                        "{} -> {} [{:?}]: {} pkts, {} bytes, {} syn, {} ack, {} dst ports",
+                        flow.key.src_ip,
+                        flow.key.dst_ip,
+                        flow.key.protocol,
+                        flow.packet_count,
+                        flow.byte_count,
+                        flow.syn_count,
+                        flow.ack_count,
+                        flow.distinct_dst_ports
+                    );
+                }
+                next_dump_micros = Some(due + dump_interval_micros);
+            }
         }
     }
 

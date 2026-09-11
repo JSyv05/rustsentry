@@ -34,12 +34,36 @@ struct WindowState {
     last_seen_micros: i64,
 }
 
+pub struct FlowSnapshot {
+    pub key: FlowKey,
+    pub packet_count: u64,
+    pub byte_count: u64,
+    pub syn_count: u64,
+    pub ack_count: u64,
+    pub distinct_dst_ports: usize,
+    pub window_start_micros: i64,
+    pub last_seen_micros: i64,
+}
+
 impl SlidingWindowCounters {
     pub fn new(window_secs: u64) -> Self {
         Self {
             window_secs,
             counts: HashMap::new(),
         }
+    }
+
+    pub fn flows(&self) -> impl Iterator<Item = FlowSnapshot> + '_ {
+        self.counts.iter().map(|(key, state)| FlowSnapshot {
+            key: key.clone(),
+            packet_count: state.packet_count,
+            byte_count: state.byte_count,
+            syn_count: state.syn_count,
+            ack_count: state.ack_count,
+            distinct_dst_ports: state.distinct_dst_ports.len(),
+            window_start_micros: state.window_start_micros,
+            last_seen_micros: state.last_seen_micros,
+        })
     }
 
     pub fn flow_count(&self) -> usize {

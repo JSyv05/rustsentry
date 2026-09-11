@@ -1,7 +1,6 @@
 //! Capture layer: wraps live pcap capture and offline .pcap file replay
 //! behind a single interface, so the rest of the pipeline doesn't care
 //! which one it's reading from.
-
 use anyhow::Context;
 use anyhow::Result;
 
@@ -27,12 +26,27 @@ pub struct LiveCapture {
 /// exists, and constructs if one does.
 
 impl LiveCapture {
-    pub fn new() -> Result<Self> {
+    fn activate(device: pcap::Device) -> Result<Self> {
         Ok(Self {
-            capture: pcap::Device::lookup()?
-                .context("no default device found")?
+            capture: pcap::Capture::from_device(device)?
+                .promisc(true)
+                .timeout(100)
+                .immediate_mode(true)
                 .open()?,
         })
+    }
+
+    pub fn new() -> Result<Self> {
+        let device = pcap::Device::lookup()?.context("no default device found")?;
+        Self::activate(device)
+    }
+
+    pub fn on_device(name: &str) -> Result<Self> {
+        let device = pcap::Device::list()?
+            .into_iter()
+            .find(|d| d.name == name)
+            .context("device not found")?;
+        Self::activate(device)
     }
 }
 
@@ -43,13 +57,22 @@ impl LiveCapture {
 
 impl FrameSource for LiveCapture {
     fn next_frame(&mut self) -> Result<Option<RawFrame>> {
-        match self.capture.next_packet() {
-            Ok(packet) => Ok(Some(RawFrame {
-                timestamp_micros: packet.header.ts.tv_sec * 1_000_000 + packet.header.ts.tv_usec,
-                data: packet.data.to_vec(),
-            })),
-            Err(pcap::Error::NoMorePackets) => Ok(None),
-            Err(e) => Err(e.into()),
+        loop {
+            match self.capture.next_packet() {
+                Ok(packet) => {
+                    return Ok(Some(RawFrame {
+                        timestamp_micros: packet.header.ts.tv_sec * 1_000_000
+                            + packet.header.ts.tv_usec,
+                        data: packet.data.to_vec(),
+                    }))
+                }
+                Err(pcap::Error::NoMorePackets) => return Ok(None),
+                Err(pcap::Error::TimeoutExpired) => continue,
+                Err(e) => {
+                    eprintln!("frame source error: {:?}", e);
+                    return Err(e.into());
+                }
+            }
         }
     }
 }
