@@ -38,4 +38,8 @@ pub struct DetectorConfig {
     pub window_secs: u64,
     pub syn_without_ack_threshold: u64,
     pub distinct_ports_threshold: u64,
+    /// Not a detector threshold — how often `cli`'s flow-table dump prints.
+    /// Reusing this struct/file for it anyway rather than inventing a
+    /// second config just for one value.
+    pub dump_interval_secs: u64,
 }

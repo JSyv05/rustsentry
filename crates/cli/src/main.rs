@@ -8,11 +8,12 @@ use flow::{FlowKey, SlidingWindowCounters};
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().collect();
 
-    let dump_interval_micros: i64 = 5_000_000; // 5s, based on packet time
+    let dump_interval_micros: i64 = 5_000_000; // 5s, based on packet time. to be controlled by config
     let mut next_dump_micros: Option<i64> = None;
 
     let mut source: Box<dyn FrameSource> = match args.get(1).map(String::as_str) {
         Some("--live") => Box::new(LiveCapture::new()?),
+        Some("--live=eth2") => Box::new(LiveCapture::on_device("eth2")?),
         Some(path) => Box::new(PcapFileReplay::new(path)?),
         None => Box::new(PcapFileReplay::new(
             "test-data/pcaps/4SICS-GeekLounge-151020.pcap",
