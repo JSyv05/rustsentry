@@ -143,3 +143,23 @@ a paper trail since your advisor is on sabbatical during grading.
   as one.
 
 ---
+
+- **Date:** 09/13/2026
+- **Decision:** Bumped the workspace Rust edition from 2021 to 2024
+  (`Cargo.toml`'s `[workspace.package] edition`). Every crate inherits it
+  via `edition.workspace = true`, so this is a single-line, workspace-wide
+  change rather than a per-crate edit.
+- **Why:** No reason found to stay on 2021 — there's no `rust-toolchain`
+  file or documented MSRV anywhere in the repo pinning an older toolchain,
+  and this workspace has no external consumers whose edition compatibility
+  would need protecting. Verified `cargo build --workspace` and
+  `cargo test --workspace` both still pass with no new warnings and no
+  behavior change after the bump (current toolchain: rustc 1.98.0, which
+  fully supports edition 2024). Picking it up now, this early in the
+  project, is cheaper than migrating later once more code exists to touch.
+- **Alternatives considered:** Staying on edition 2021 — rejected, no
+  constraint (MSRV, external consumer, CI toolchain pin) was found that
+  edition 2024 would violate, so there was no offsetting downside to weigh
+  against using the current edition.
+
+---
