@@ -50,6 +50,13 @@ impl LiveCapture {
     }
 }
 
+/// Lists network devices available for live capture (see `LiveCapture::on_device`).
+/// Device names are platform- and machine-specific (e.g. `eth2` on one box,
+/// `enp10s0` on another), so callers should list rather than guess.
+pub fn list_devices() -> Result<Vec<pcap::Device>> {
+    Ok(pcap::Device::list()?)
+}
+
 /// next_frame checks to see if there is another packet to read. If there is,
 /// then it will return the time and the data associated with the frame.
 /// if it cant capture any more packets for any reason, then the program ends,
