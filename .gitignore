@@ -1,6 +1,7 @@
 /target
-Cargo.lock
 *.pcap
+*.md5
+*.csv
 !test-data/pcaps/.gitkeep
 test-data/datasets/*
 !test-data/datasets/.gitkeep

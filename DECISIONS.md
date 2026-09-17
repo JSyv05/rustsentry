@@ -163,3 +163,28 @@ a paper trail since your advisor is on sabbatical during grading.
   against using the current edition.
 
 ---
+
+- **Date:** 09/17/2026
+- **Decision:** Replay mode keeps deriving "now" from the packet's own
+  embedded timestamp (`pkt.timestamp_micros`, as `SlidingWindowCounters`
+  already does in `crates/flow/src/lib.rs`). Live/daemon mode will instead
+  need a real wall clock (`Instant`/`SystemTime`) ticking on its own,
+  independent of packet arrival. Not implemented yet — daemon mode as a
+  whole is still deferred per the 09/01/2026 entry; this just settles which
+  time source each mode uses once eviction is built.
+- **Why:** Replay's packet-timestamp-driven time is deterministic and
+  matches the pcap file exactly, so there's no reason to change it for that
+  mode. But it breaks down for live capture: if "now" only advances when a
+  packet arrives, a quiet/idle period with no traffic never advances time at
+  all, so a stale flow would never age out of the flow table — exactly the
+  unbounded-growth risk the 09/01 entry flagged. A wall-clock tick (e.g. a
+  periodic timer independent of the packet-read loop) is the only way to
+  advance time during idle stretches in live mode.
+- **Alternatives considered:** Using packet timestamps as the sole time
+  source in both modes — rejected, doesn't solve idle-period eviction in
+  live mode. Using a wall clock in both modes — rejected for replay, since
+  it would make replay speed (and thus window/eviction behavior) dependent
+  on how fast the file happens to be read rather than the pcap's own
+  timestamps, breaking replay's determinism.
+
+---
