@@ -5,9 +5,9 @@ pub mod port_scan;
 pub mod syn_flood;
 // pub mod icmp_flood;   // Phase 3 stretch goal
 // pub mod slowloris;    // Phase 3 stretch goal, only if time allows
-pub mod arp_spoof;        // Phase 3 backlog, priority 6 — see capstone-plan.md
-pub mod dns_tunneling;    // Phase 3 backlog, priority 7 — see capstone-plan.md
-pub mod dhcp_starvation;  // Phase 3 backlog, priority 8 — see capstone-plan.md
+pub mod arp_spoof; // Phase 3 backlog, priority 6 — see capstone-plan.md
+pub mod dhcp_starvation; // Phase 3 backlog, priority 8 — see capstone-plan.md
+pub mod dns_tunneling; // Phase 3 backlog, priority 7 — see capstone-plan.md
 
 use std::net::IpAddr;
 

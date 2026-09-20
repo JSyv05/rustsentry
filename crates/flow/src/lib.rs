@@ -122,6 +122,12 @@ impl SlidingWindowCounters {
             state.distinct_dst_ports.insert(port);
         }
     }
+
+    pub fn evict_stale(&mut self, now_micros: i64) {
+        let window_micros = self.window_secs as i64 * 1_000_000;
+        self.counts
+            .retain(|_, state| now_micros - state.last_seen_micros <= window_micros);
+    }
 }
 
 #[cfg(test)]
