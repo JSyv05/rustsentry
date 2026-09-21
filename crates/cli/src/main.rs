@@ -96,8 +96,6 @@ fn main() -> anyhow::Result<()> {
                     }
                 }
             }
-            // TODO(week 5): use this to run wall-clock-driven eviction/dump
-            // for live mode during idle traffic (see DECISIONS.md 09/17).
             FrameEvent::Timeout => {
                 if last_tick.elapsed() >= tick_interval {
                     last_tick = Instant::now();
