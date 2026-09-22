@@ -10,8 +10,26 @@ pub struct RawFrame {
     pub data: Vec<u8>,
 }
 
+/// Outcome of polling a `FrameSource` once.
+///
+/// This is three states, not two, on purpose: collapsing "no frame right
+/// now, but the stream is still live" and "the stream is permanently over"
+/// into a single `None` would make a live capture's idle read-timeout look
+/// identical to a replay file finishing — which would end the whole
+/// program the first time live traffic goes quiet for 100ms.
+pub enum FrameEvent {
+    /// A frame was captured.
+    Frame(RawFrame),
+    /// No frame arrived within the read timeout, but the source is still
+    /// live — call `next_frame` again. Gives the caller a chance to run
+    /// time-based work (e.g. flow eviction) even during quiet traffic.
+    Timeout,
+    /// The source is exhausted (end of a replayed file). Stop calling.
+    Eof,
+}
+
 pub trait FrameSource {
-    fn next_frame(&mut self) -> Result<Option<RawFrame>>;
+    fn next_frame(&mut self) -> Result<FrameEvent>;
 }
 
 /// LiveCapture implements active network sniffing. The struct uses
@@ -63,22 +81,17 @@ pub fn list_devices() -> Result<Vec<pcap::Device>> {
 /// otherwise, it sends an error.
 
 impl FrameSource for LiveCapture {
-    fn next_frame(&mut self) -> Result<Option<RawFrame>> {
-        loop {
-            match self.capture.next_packet() {
-                Ok(packet) => {
-                    return Ok(Some(RawFrame {
-                        timestamp_micros: packet.header.ts.tv_sec * 1_000_000
-                            + packet.header.ts.tv_usec,
-                        data: packet.data.to_vec(),
-                    }))
-                }
-                Err(pcap::Error::NoMorePackets) => return Ok(None),
-                Err(pcap::Error::TimeoutExpired) => continue,
-                Err(e) => {
-                    eprintln!("frame source error: {:?}", e);
-                    return Err(e.into());
-                }
+    fn next_frame(&mut self) -> Result<FrameEvent> {
+        match self.capture.next_packet() {
+            Ok(packet) => Ok(FrameEvent::Frame(RawFrame {
+                timestamp_micros: packet.header.ts.tv_sec * 1_000_000 + packet.header.ts.tv_usec,
+                data: packet.data.to_vec(),
+            })),
+            Err(pcap::Error::NoMorePackets) => Ok(FrameEvent::Eof),
+            Err(pcap::Error::TimeoutExpired) => Ok(FrameEvent::Timeout),
+            Err(e) => {
+                eprintln!("frame source error: {:?}", e);
+                Err(e.into())
             }
         }
     }
@@ -111,13 +124,13 @@ impl PcapFileReplay {
 /// otherwise, it sends an error.
 
 impl FrameSource for PcapFileReplay {
-    fn next_frame(&mut self) -> Result<Option<RawFrame>> {
+    fn next_frame(&mut self) -> Result<FrameEvent> {
         match self.capture.next_packet() {
-            Ok(packet) => Ok(Some(RawFrame {
+            Ok(packet) => Ok(FrameEvent::Frame(RawFrame {
                 timestamp_micros: packet.header.ts.tv_sec * 1_000_000 + packet.header.ts.tv_usec,
                 data: packet.data.to_vec(),
             })),
-            Err(pcap::Error::NoMorePackets) => Ok(None),
+            Err(pcap::Error::NoMorePackets) => Ok(FrameEvent::Eof),
             Err(e) => Err(e.into()),
         }
     }

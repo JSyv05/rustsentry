@@ -3,6 +3,7 @@
 
 use std::net::IpAddr;
 
+use pnet::packet::Packet;
 use pnet::packet::ethernet::EtherTypes;
 use pnet::packet::ethernet::EthernetPacket;
 use pnet::packet::icmp::IcmpPacket;
@@ -11,7 +12,6 @@ use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::tcp::TcpFlags as PnetTcpFlags;
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::udp::UdpPacket;
-use pnet::packet::Packet;
 
 #[derive(Debug, Clone)]
 pub struct PacketSummary {
@@ -261,8 +261,7 @@ mod tests {
 
     #[test]
     fn parses_frame_with_unhandled_ip_protocol() {
-        let summary =
-            parse_frame(&RAW_OTHER_PROTO_FRAME, 3_456).expect("frame should parse");
+        let summary = parse_frame(&RAW_OTHER_PROTO_FRAME, 3_456).expect("frame should parse");
 
         assert_eq!(summary.timestamp_micros, 3_456);
         assert_eq!(summary.src_ip, IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)));

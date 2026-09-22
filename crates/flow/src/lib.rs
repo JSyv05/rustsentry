@@ -4,7 +4,7 @@
 
 use parser::PacketSummary;
 use parser::Protocol;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::net::IpAddr;
 
 /// Key for grouping packets into a flow. Adjust granularity per detector:
@@ -16,11 +16,10 @@ pub struct FlowKey {
     pub protocol: Protocol,
 }
 
-/// TODO(week 5): implement a time-bucketed ring buffer so window queries
-/// are O(1) amortized instead of rescanning full packet history.
 pub struct SlidingWindowCounters {
     window_secs: u64,
     counts: HashMap<FlowKey, WindowState>,
+    eviction_queue: VecDeque<(i64, FlowKey)>,
 }
 
 #[derive(Default)]
@@ -50,6 +49,7 @@ impl SlidingWindowCounters {
         Self {
             window_secs,
             counts: HashMap::new(),
+            eviction_queue: VecDeque::new(),
         }
     }
 
@@ -98,9 +98,10 @@ impl SlidingWindowCounters {
         self.counts.get(key).unwrap().distinct_dst_ports.len()
     }
 
-    /// TODO(week 3): update counters for the appropriate key(s), evicting
-    /// state that has aged out of the window.
     pub fn record(&mut self, key: FlowKey, pkt: &PacketSummary) {
+        self.eviction_queue
+            .push_back((pkt.timestamp_micros, key.clone()));
+
         let state = self.counts.entry(key).or_insert_with(|| WindowState {
             window_start_micros: pkt.timestamp_micros,
             ..Default::default()
@@ -122,10 +123,27 @@ impl SlidingWindowCounters {
             state.distinct_dst_ports.insert(port);
         }
     }
+
+    pub fn evict_stale(&mut self, now_micros: i64) {
+        let window_micros = self.window_secs as i64 * 1_000_000;
+        while let Some((_, key)) = self.eviction_queue.front() {
+            let key = key.clone();
+
+            match self.counts.get(&key) {
+                Some(state) if now_micros - state.last_seen_micros > window_micros => {
+                    self.counts.remove(&key);
+                    self.eviction_queue.pop_front();
+                }
+
+                _ => {
+                    self.eviction_queue.pop_front();
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
-
 mod tests {
 
     use parser::parse_frame;
