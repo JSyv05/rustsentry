@@ -2,6 +2,7 @@
 //! over sliding time windows. This is the shared primitive every detector
 //! in `detect` builds on (week 3 in the capstone plan).
 
+use parser::MICROS_PER_SEC;
 use parser::PacketSummary;
 use parser::Protocol;
 use std::collections::{HashMap, VecDeque};
@@ -125,7 +126,7 @@ impl SlidingWindowCounters {
     }
 
     pub fn evict_stale(&mut self, now_micros: i64) {
-        let window_micros = self.window_secs as i64 * 1_000_000;
+        let window_micros = self.window_secs as i64 * MICROS_PER_SEC;
         while let Some((_, key)) = self.eviction_queue.front() {
             let key = key.clone();
 

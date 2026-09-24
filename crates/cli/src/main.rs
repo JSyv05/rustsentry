@@ -1,11 +1,15 @@
 //! Entry point: wires capture -> parser -> flow -> detect together and
 //! prints/logs alerts. Week 1 goal: this compiles and runs, even if every
 //! stage below it is still a todo!().
-
 use capture::{FrameEvent, FrameSource, LiveCapture, PcapFileReplay};
 use chrono::DateTime;
+use detect::DetectorConfig;
 use flow::{FlowKey, SlidingWindowCounters};
+use parser::MICROS_PER_SEC;
+use std::fs;
 use std::time::{Duration, Instant, SystemTime};
+
+const DEFAULT_PCAP: &str = "test-data/pcaps/4SICS-GeekLounge-151020.pcap";
 
 fn is_due(dump_micros: &mut Option<i64>, dump_interval: i64, current_micros: i64) -> bool {
     let due = *dump_micros.get_or_insert(current_micros + dump_interval);
@@ -17,10 +21,10 @@ fn is_due(dump_micros: &mut Option<i64>, dump_interval: i64, current_micros: i64
     }
 }
 
-fn dump(counter: &SlidingWindowCounters, current_micros: i64) {
-    let readable = DateTime::from_timestamp_micros(current_micros)
+fn dump(counter: &SlidingWindowCounters, now_micros: i64) {
+    let readable = DateTime::from_timestamp_micros(now_micros)
         .map(|dt| dt.format("%Y-%m-%d %H:%M:%S%.6f UTC").to_string())
-        .unwrap_or_else(|| current_micros.to_string());
+        .unwrap_or_else(|| now_micros.to_string());
 
     println!("--- flow table @ {} ---", readable);
     for flow in counter.flows() {
@@ -52,11 +56,12 @@ fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let dump_interval_micros: i64 = 5_000_000; // 5s, based on packet time. to be controlled by config
+    let cfg: DetectorConfig = toml::from_str(&fs::read_to_string("config/thresholds.toml")?)?;
+    let dump_interval_micros: i64 = cfg.dump_interval_secs as i64 * MICROS_PER_SEC;
     let mut next_dump_micros: Option<i64> = None;
 
     let mut last_tick = Instant::now();
-    let tick_interval = Duration::from_secs(5);
+    let tick_interval = Duration::from_secs(cfg.dump_interval_secs);
 
     let mut source: Box<dyn FrameSource> = match args.get(1).map(String::as_str) {
         Some("--live") => Box::new(LiveCapture::new()?),
@@ -65,14 +70,12 @@ fn main() -> anyhow::Result<()> {
             Box::new(LiveCapture::on_device(&arg["--live=".len()..])?)
         }
         Some(path) => Box::new(PcapFileReplay::new(path)?),
-        None => Box::new(PcapFileReplay::new(
-            "test-data/pcaps/4SICS-GeekLounge-151020.pcap",
-        )?),
+        None => Box::new(PcapFileReplay::new(DEFAULT_PCAP)?),
     };
 
     println!("rustsentry starting up");
 
-    let mut counters = SlidingWindowCounters::new(10); // TODO! use config/threshold.toml for config
+    let mut counters = SlidingWindowCounters::new(cfg.window_secs);
     loop {
         match source.next_frame()? {
             FrameEvent::Frame(frame) => {
@@ -92,6 +95,11 @@ fn main() -> anyhow::Result<()> {
                     ) {
                         dump(&counters, summary.timestamp_micros);
 
+                        for alert in
+                            detect::syn_flood::check(&counters, &cfg, summary.timestamp_micros)
+                        {
+                            println!("{alert:?}");
+                        }
                         counters.evict_stale(summary.timestamp_micros);
                     }
                 }
@@ -106,6 +114,9 @@ fn main() -> anyhow::Result<()> {
                     if is_due(&mut next_dump_micros, dump_interval_micros, now_micros) {
                         dump(&counters, now_micros);
 
+                        for alert in detect::syn_flood::check(&counters, &cfg, now_micros) {
+                            println!("{alert:?}");
+                        }
                         counters.evict_stale(now_micros);
                     }
                 }
@@ -116,6 +127,5 @@ fn main() -> anyhow::Result<()> {
 
     // TODO(week 6-7): run detect::syn_flood::check() / port_scan::check()
     //                 on a timer and print any Alerts
-
     Ok(())
 }
