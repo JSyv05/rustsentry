@@ -13,6 +13,8 @@ use pnet::packet::tcp::TcpFlags as PnetTcpFlags;
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::udp::UdpPacket;
 
+pub const MICROS_PER_SEC: i64 = 1_000_000;
+
 #[derive(Debug, Clone)]
 pub struct PacketSummary {
     pub timestamp_micros: i64,
