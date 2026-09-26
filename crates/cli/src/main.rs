@@ -55,9 +55,9 @@ fn load_config(explicit: Option<&str>) -> anyhow::Result<DetectorConfig> {
     toml::from_str(&text).with_context(|| format!("parsing config ({source})"))
 }
 
-fn is_due(dump_micros: &mut Option<i64>, dump_interval: i64, current_micros: i64) -> bool {
-    let due = *dump_micros.get_or_insert(current_micros + dump_interval);
-    if current_micros >= due {
+fn is_due(dump_micros: &mut Option<i64>, dump_interval: i64, now_micros: i64) -> bool {
+    let due = *dump_micros.get_or_insert(now_micros + dump_interval);
+    if now_micros >= due {
         *dump_micros = Some(due + dump_interval); // or current_micros + dump_interval
         true
     } else {
@@ -84,6 +84,17 @@ fn dump(counter: &SlidingWindowCounters, now_micros: i64) {
             flow.distinct_dst_ports
         );
     }
+}
+
+fn tick(counters: &mut SlidingWindowCounters, cfg: &DetectorConfig, now_micros: i64) {
+    dump(counters, now_micros);
+    for alert in detect::syn_flood::check(counters, cfg, now_micros) {
+        println!("{alert:?}");
+    }
+    for alert in detect::port_scan::check(counters, cfg, now_micros) {
+        println!("{alert:?}");
+    }
+    counters.evict_stale(now_micros);
 }
 
 fn main() -> anyhow::Result<()> {
@@ -139,14 +150,7 @@ fn main() -> anyhow::Result<()> {
                         dump_interval_micros,
                         summary.timestamp_micros,
                     ) {
-                        dump(&counters, summary.timestamp_micros);
-
-                        for alert in
-                            detect::syn_flood::check(&counters, &cfg, summary.timestamp_micros)
-                        {
-                            println!("{alert:?}");
-                        }
-                        counters.evict_stale(summary.timestamp_micros);
+                        tick(&mut counters, &cfg, summary.timestamp_micros);
                     }
                 }
             }
@@ -158,12 +162,7 @@ fn main() -> anyhow::Result<()> {
                         .as_micros() as i64;
 
                     if is_due(&mut next_dump_micros, dump_interval_micros, now_micros) {
-                        dump(&counters, now_micros);
-
-                        for alert in detect::syn_flood::check(&counters, &cfg, now_micros) {
-                            println!("{alert:?}");
-                        }
-                        counters.evict_stale(now_micros);
+                        tick(&mut counters, &cfg, now_micros);
                     }
                 }
             }
@@ -171,7 +170,5 @@ fn main() -> anyhow::Result<()> {
         };
     }
 
-    // TODO(week 6-7): run detect::syn_flood::check() / port_scan::check()
-    //                 on a timer and print any Alerts
     Ok(())
 }

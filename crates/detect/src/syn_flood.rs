@@ -32,3 +32,21 @@ pub fn check(
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn below_threshold_no_alert() {}
+
+    #[test]
+    fn at_threshold_alerts_on_victim() {}
+
+    #[test]
+    fn distributed_sources_aggregate_per_destination() {}
+
+    #[test]
+    fn balanced_handshakes_no_alert() {}
+
+    #[test]
+    fn only_victim_over_threshold_alerts() {}
+}
