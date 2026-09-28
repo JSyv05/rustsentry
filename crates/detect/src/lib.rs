@@ -22,7 +22,7 @@ pub struct Alert {
     pub detail: String,
 }
 
-#[derive(Debug, Clone, Copy, serde::Serialize)]
+#[derive(PartialEq, Debug, Clone, Copy, serde::Serialize)]
 pub enum AlertKind {
     SynFlood,
     PortScan,

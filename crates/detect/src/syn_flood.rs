@@ -80,8 +80,8 @@ mod tests {
 
     #[test]
     fn at_threshold_alerts_on_victim() {
-        let clt_ip = test_utils::ip(1);
-        let tgt_ip = test_utils::ip(2);
+        let clt_ip = test_utils::ip(0);
+        let tgt_ip = test_utils::ip(1);
 
         let cfg = test_utils::sample_config(
             WINDOW_SECS,
@@ -111,6 +111,7 @@ mod tests {
         assert!(!alerts.is_empty());
         assert_eq!(alerts.len(), 1);
         assert_eq!(alerts[0].target, tgt_ip);
+        assert_eq!(alerts[0].kind, crate::AlertKind::SynFlood);
     }
 
     #[test]
@@ -149,8 +150,8 @@ mod tests {
 
     #[test]
     fn balanced_handshakes_no_alert() {
-        let clt_ip = test_utils::ip(1);
-        let tgt_ip = test_utils::ip(2);
+        let clt_ip = test_utils::ip(0);
+        let tgt_ip = test_utils::ip(1);
 
         let cfg = test_utils::sample_config(
             WINDOW_SECS,
@@ -207,9 +208,9 @@ mod tests {
 
     #[test]
     fn only_victim_over_threshold_alerts() {
-        let clt_ip = test_utils::ip(1);
-        let tgt_ip = test_utils::ip(2);
-        let otr_ip = test_utils::ip(3);
+        let clt_ip = test_utils::ip(0);
+        let tgt_ip = test_utils::ip(1);
+        let otr_ip = test_utils::ip(2);
 
         let cfg = test_utils::sample_config(
             WINDOW_SECS,
