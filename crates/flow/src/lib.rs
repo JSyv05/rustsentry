@@ -99,19 +99,19 @@ impl SlidingWindowCounters {
         self.counts.get(key).unwrap().distinct_dst_ports.len()
     }
 
-    pub fn record(&mut self, key: FlowKey, pkt: &PacketSummary) {
+    pub fn record(&mut self, key: FlowKey, packet: &PacketSummary) {
         self.eviction_queue
-            .push_back((pkt.timestamp_micros, key.clone()));
+            .push_back((packet.timestamp_micros, key.clone()));
 
         let state = self.counts.entry(key).or_insert_with(|| WindowState {
-            window_start_micros: pkt.timestamp_micros,
+            window_start_micros: packet.timestamp_micros,
             ..Default::default()
         });
         state.packet_count += 1;
-        state.byte_count += pkt.payload_len as u64;
-        state.last_seen_micros = pkt.timestamp_micros;
+        state.byte_count += packet.payload_len as u64;
+        state.last_seen_micros = packet.timestamp_micros;
 
-        if let Some(flags) = pkt.tcp_flags {
+        if let Some(flags) = packet.tcp_flags {
             if flags.syn {
                 state.syn_count += 1;
             }
@@ -120,7 +120,7 @@ impl SlidingWindowCounters {
             }
         }
 
-        if let Some(port) = pkt.dst_port {
+        if let Some(port) = packet.dst_port {
             state.distinct_dst_ports.insert(port);
         }
     }

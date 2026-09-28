@@ -1,5 +1,5 @@
 //! Week 7: Port scan detector.
-//! Alert when a single source IP contacts more than N distinct destination
+//! Alert when a single source IP contacts at or more than N distinct destination
 //! ports within the configured window.
 
 use crate::{Alert, AlertKind, DetectorConfig};
@@ -31,6 +31,9 @@ pub fn check(
 
 #[cfg(test)]
 mod tests {
+    use parser::TcpFlags;
+
+    use crate::test_utils;
     #[test]
     fn below_threshold_no_alert() {}
 
