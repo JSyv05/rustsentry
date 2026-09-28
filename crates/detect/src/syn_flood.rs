@@ -126,7 +126,7 @@ mod tests {
 
         let mut ctr = SlidingWindowCounters::new(cfg.window_secs);
 
-        for n in 1..cfg.syn_without_ack_threshold + 1 {
+        for n in 0..cfg.syn_without_ack_threshold {
             let clt_ip = test_utils::ip(n as u8 % 4 + 1);
             let clt_sum = test_utils::sample_tcp_packet(
                 clt_ip,

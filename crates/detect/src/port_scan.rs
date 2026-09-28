@@ -31,9 +31,14 @@ pub fn check(
 
 #[cfg(test)]
 mod tests {
+    use crate::test_utils;
+    use flow::SlidingWindowCounters;
     use parser::TcpFlags;
 
-    use crate::test_utils;
+    const WINDOW_SECS: u64 = 10;
+    const SYN_WITHOUT_ACK_THRESHOLD: u64 = 100;
+    const DISTINCT_PORTS_THRESHOLD: u64 = 20;
+    const DUMP_INTERVAL_SECS: u64 = 5;
     #[test]
     fn below_threshold_no_alert() {}
 
