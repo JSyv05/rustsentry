@@ -188,3 +188,32 @@ a paper trail since your advisor is on sabbatical during grading.
   timestamps, breaking replay's determinism.
 
 ---
+
+- **Date:** 09/28/2026
+- **Decision:** No code change. Documenting a lab-environment quirk found
+  while testing live capture in the Kali/Ubuntu VirtualBox NatNetwork
+  setup: on a capture handle that has received zero packets since it was
+  opened, libpcap's read timeout (`.timeout(100)` +
+  `.immediate_mode(true)` in `crates/capture/src/lib.rs`) does not fire —
+  the read blocks indefinitely until the first packet arrives, after which
+  `FrameEvent::Timeout` starts firing on schedule as expected. Sending a
+  single ping into the target VM unblocked it. Since `tick()`'s 5-second
+  dump/check/evict cadence depends on `FrameEvent::Timeout` firing while
+  idle, a fully silent interface never reaches Milestone 2's detectors at
+  all until something breaks the silence.
+- **Why:** Confirmed the capture config itself is correct (timeout and
+  immediate mode are both set) — this is a platform behavior of libpcap on
+  Linux, not a bug in `rustsentry`. Not fixing it in code because a real
+  monitored interface is essentially never fully silent (background
+  broadcast/ARP traffic alone would prime it); this only surfaces on an
+  isolated lab network with nothing else running on it. Logged here so the
+  fix isn't rediscovered blind next time, and to justify the background
+  traffic note added to `evaluation-methodology.md`.
+- **Alternatives considered:** Adding an application-level keepalive/tick
+  independent of `FrameEvent::Timeout` — rejected for now; it would add a
+  second timing path alongside the existing packet-timestamp/wall-clock
+  split (see 09/17/2026 entry) to solve a problem that a real deployment
+  won't have. Revisit only if daemon mode needs to guarantee eviction
+  progress on genuinely silent interfaces.
+
+---

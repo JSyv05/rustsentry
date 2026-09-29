@@ -6,3 +6,5 @@
 test-data/datasets/*
 !test-data/datasets/.gitkeep
 *.model
+*.json
+*.jsonl

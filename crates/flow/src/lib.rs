@@ -20,7 +20,16 @@ pub struct FlowKey {
 pub struct SlidingWindowCounters {
     window_secs: u64,
     counts: HashMap<FlowKey, WindowState>,
-    eviction_queue: VecDeque<(i64, FlowKey)>,
+    eviction_queue: VecDeque<(i64, FlowKey, PacketContribution)>,
+}
+
+/// What one packet added to its flow's counters, so `evict_stale` can
+/// subtract exactly that much back out once the packet ages past the
+/// window, instead of only tracking whether the flow overall is idle.
+struct PacketContribution {
+    syn: bool,
+    ack: bool,
+    bytes: u64,
 }
 
 #[derive(Default)]
@@ -29,7 +38,7 @@ struct WindowState {
     syn_count: u64,
     ack_count: u64,
     byte_count: u64,
-    distinct_dst_ports: std::collections::HashSet<u16>,
+    distinct_dst_ports: HashMap<u16, i64>,
     window_start_micros: i64,
     last_seen_micros: i64,
 }
@@ -99,46 +108,69 @@ impl SlidingWindowCounters {
         self.counts.get(key).unwrap().distinct_dst_ports.len()
     }
 
-    pub fn record(&mut self, key: FlowKey, pkt: &PacketSummary) {
+    pub fn record(&mut self, key: FlowKey, packet: &PacketSummary) {
+        let flags = packet.tcp_flags.unwrap_or_default();
+        let contribution = PacketContribution {
+            syn: flags.syn,
+            ack: flags.ack,
+            bytes: packet.payload_len as u64,
+        };
         self.eviction_queue
-            .push_back((pkt.timestamp_micros, key.clone()));
+            .push_back((packet.timestamp_micros, key.clone(), contribution));
 
         let state = self.counts.entry(key).or_insert_with(|| WindowState {
-            window_start_micros: pkt.timestamp_micros,
+            window_start_micros: packet.timestamp_micros,
             ..Default::default()
         });
         state.packet_count += 1;
-        state.byte_count += pkt.payload_len as u64;
-        state.last_seen_micros = pkt.timestamp_micros;
+        state.byte_count += packet.payload_len as u64;
+        state.last_seen_micros = packet.timestamp_micros;
 
-        if let Some(flags) = pkt.tcp_flags {
-            if flags.syn {
-                state.syn_count += 1;
-            }
-            if flags.ack {
-                state.ack_count += 1;
-            }
+        if flags.syn {
+            state.syn_count += 1;
+        }
+        if flags.ack {
+            state.ack_count += 1;
         }
 
-        if let Some(port) = pkt.dst_port {
-            state.distinct_dst_ports.insert(port);
+        if let Some(port) = packet.dst_port {
+            state
+                .distinct_dst_ports
+                .insert(port, packet.timestamp_micros);
         }
     }
 
     pub fn evict_stale(&mut self, now_micros: i64) {
         let window_micros = self.window_secs as i64 * MICROS_PER_SEC;
-        while let Some((_, key)) = self.eviction_queue.front() {
-            let key = key.clone();
+        // Queue timestamps are non-decreasing, so the first in-window entry
+        // means everything behind it is in-window too.
+        while self
+            .eviction_queue
+            .front()
+            .is_some_and(|(ts, ..)| now_micros - ts > window_micros)
+        {
+            let Some((_, key, contribution)) = self.eviction_queue.pop_front() else {
+                break;
+            };
+            let Some(state) = self.counts.get_mut(&key) else {
+                continue;
+            };
 
-            match self.counts.get(&key) {
-                Some(state) if now_micros - state.last_seen_micros > window_micros => {
-                    self.counts.remove(&key);
-                    self.eviction_queue.pop_front();
-                }
+            state.packet_count -= 1;
+            state.byte_count -= contribution.bytes;
+            if contribution.syn {
+                state.syn_count -= 1;
+            }
+            if contribution.ack {
+                state.ack_count -= 1;
+            }
 
-                _ => {
-                    self.eviction_queue.pop_front();
-                }
+            if state.packet_count == 0 {
+                self.counts.remove(&key);
+            } else {
+                state
+                    .distinct_dst_ports
+                    .retain(|_, seen| now_micros - *seen <= window_micros);
             }
         }
     }
@@ -399,5 +431,120 @@ mod tests {
         counters.record(summary_key_flow.clone(), &summary_3);
 
         assert_eq!(counters.distinct_dst_ports_count(&summary_key_flow), 2);
+    }
+    fn flow_key_for(packet: &PacketSummary) -> FlowKey {
+        FlowKey {
+            src_ip: packet.src_ip,
+            dst_ip: packet.dst_ip,
+            protocol: packet.protocol,
+        }
+    }
+
+    fn packet_to_port(timestamp_micros: i64, port: u16) -> PacketSummary {
+        PacketSummary {
+            dst_port: Some(port),
+            ..sample_tcp_packet(timestamp_micros, 10)
+        }
+    }
+
+    // A flow that was still fresh at one evict_stale() call, then goes idle,
+    // must be removed by a later call once it ages out of the window.
+    #[test]
+    fn idle_flow_is_evicted_after_earlier_fresh_evict() {
+        let first = packet_to_port(0, 80);
+        let key = flow_key_for(&first);
+        let mut counters = SlidingWindowCounters::new(10);
+        counters.record(key, &first);
+
+        counters.evict_stale(MICROS_PER_SEC);
+        assert_eq!(counters.flow_count(), 1);
+
+        counters.evict_stale(100 * MICROS_PER_SEC);
+        assert_eq!(counters.flow_count(), 0);
+    }
+
+    // A flow refreshed by a newer packet survives when its older queue
+    // entries age out.
+    #[test]
+    fn refreshed_flow_survives_eviction() {
+        let old = packet_to_port(0, 80);
+        let new = packet_to_port(15 * MICROS_PER_SEC, 80);
+        let key = flow_key_for(&old);
+        let mut counters = SlidingWindowCounters::new(10);
+        counters.record(key.clone(), &old);
+        counters.record(key, &new);
+
+        counters.evict_stale(15 * MICROS_PER_SEC);
+
+        assert_eq!(counters.flow_count(), 1);
+    }
+
+    // Ports last seen outside the window stop counting, but the flow stays
+    // because it is still active on another port.
+    #[test]
+    fn expired_ports_are_pruned_and_flow_stays() {
+        let old = packet_to_port(0, 80);
+        let new = packet_to_port(15 * MICROS_PER_SEC, 443);
+        let key = flow_key_for(&old);
+        let mut counters = SlidingWindowCounters::new(10);
+        counters.record(key.clone(), &old);
+        counters.record(key.clone(), &new);
+        assert_eq!(counters.distinct_dst_ports_count(&key), 2);
+
+        counters.evict_stale(15 * MICROS_PER_SEC);
+
+        assert_eq!(counters.flow_count(), 1);
+        assert_eq!(counters.distinct_dst_ports_count(&key), 1);
+    }
+
+    // Seeing a port again refreshes it, so it survives the prune.
+    #[test]
+    fn retouched_port_survives_prune() {
+        let first = packet_to_port(0, 80);
+        let again = packet_to_port(12 * MICROS_PER_SEC, 80);
+        let key = flow_key_for(&first);
+        let mut counters = SlidingWindowCounters::new(10);
+        counters.record(key.clone(), &first);
+        counters.record(key.clone(), &again);
+
+        counters.evict_stale(15 * MICROS_PER_SEC);
+
+        assert_eq!(counters.distinct_dst_ports_count(&key), 1);
+    }
+
+    // syn_count/ack_count/byte_count/packet_count must slide with the
+    // window too, not just accumulate for as long as the flow is active.
+    #[test]
+    fn scalar_counters_slide_with_window() {
+        let old_syn = PacketSummary {
+            tcp_flags: Some(TcpFlags {
+                syn: true,
+                ..TcpFlags::default()
+            }),
+            ..sample_tcp_packet(0, 50)
+        };
+        let new_ack = PacketSummary {
+            tcp_flags: Some(TcpFlags {
+                ack: true,
+                ..TcpFlags::default()
+            }),
+            ..sample_tcp_packet(15 * MICROS_PER_SEC, 30)
+        };
+        let key = flow_key_for(&old_syn);
+        let mut counters = SlidingWindowCounters::new(10);
+        counters.record(key.clone(), &old_syn);
+        counters.record(key.clone(), &new_ack);
+
+        assert_eq!(counters.packet_count(&key), 2);
+        assert_eq!(counters.syn_count(&key), 1);
+        assert_eq!(counters.byte_count(&key), 80);
+
+        counters.evict_stale(15 * MICROS_PER_SEC);
+
+        assert_eq!(counters.flow_count(), 1);
+        assert_eq!(counters.packet_count(&key), 1);
+        assert_eq!(counters.syn_count(&key), 0);
+        assert_eq!(counters.ack_count(&key), 1);
+        assert_eq!(counters.byte_count(&key), 30);
     }
 }
