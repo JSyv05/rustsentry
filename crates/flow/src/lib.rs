@@ -20,7 +20,16 @@ pub struct FlowKey {
 pub struct SlidingWindowCounters {
     window_secs: u64,
     counts: HashMap<FlowKey, WindowState>,
-    eviction_queue: VecDeque<(i64, FlowKey)>,
+    eviction_queue: VecDeque<(i64, FlowKey, PacketContribution)>,
+}
+
+/// What one packet added to its flow's counters, so `evict_stale` can
+/// subtract exactly that much back out once the packet ages past the
+/// window, instead of only tracking whether the flow overall is idle.
+struct PacketContribution {
+    syn: bool,
+    ack: bool,
+    bytes: u64,
 }
 
 #[derive(Default)]
@@ -100,8 +109,14 @@ impl SlidingWindowCounters {
     }
 
     pub fn record(&mut self, key: FlowKey, packet: &PacketSummary) {
+        let flags = packet.tcp_flags.unwrap_or_default();
+        let contribution = PacketContribution {
+            syn: flags.syn,
+            ack: flags.ack,
+            bytes: packet.payload_len as u64,
+        };
         self.eviction_queue
-            .push_back((packet.timestamp_micros, key.clone()));
+            .push_back((packet.timestamp_micros, key.clone(), contribution));
 
         let state = self.counts.entry(key).or_insert_with(|| WindowState {
             window_start_micros: packet.timestamp_micros,
@@ -111,13 +126,11 @@ impl SlidingWindowCounters {
         state.byte_count += packet.payload_len as u64;
         state.last_seen_micros = packet.timestamp_micros;
 
-        if let Some(flags) = packet.tcp_flags {
-            if flags.syn {
-                state.syn_count += 1;
-            }
-            if flags.ack {
-                state.ack_count += 1;
-            }
+        if flags.syn {
+            state.syn_count += 1;
+        }
+        if flags.ack {
+            state.ack_count += 1;
         }
 
         if let Some(port) = packet.dst_port {
@@ -134,15 +147,25 @@ impl SlidingWindowCounters {
         while self
             .eviction_queue
             .front()
-            .is_some_and(|(ts, _)| now_micros - ts > window_micros)
+            .is_some_and(|(ts, ..)| now_micros - ts > window_micros)
         {
-            let Some((_, key)) = self.eviction_queue.pop_front() else {
+            let Some((_, key, contribution)) = self.eviction_queue.pop_front() else {
                 break;
             };
             let Some(state) = self.counts.get_mut(&key) else {
                 continue;
             };
-            if now_micros - state.last_seen_micros > window_micros {
+
+            state.packet_count -= 1;
+            state.byte_count -= contribution.bytes;
+            if contribution.syn {
+                state.syn_count -= 1;
+            }
+            if contribution.ack {
+                state.ack_count -= 1;
+            }
+
+            if state.packet_count == 0 {
                 self.counts.remove(&key);
             } else {
                 state
@@ -487,5 +510,41 @@ mod tests {
         counters.evict_stale(15 * MICROS_PER_SEC);
 
         assert_eq!(counters.distinct_dst_ports_count(&key), 1);
+    }
+
+    // syn_count/ack_count/byte_count/packet_count must slide with the
+    // window too, not just accumulate for as long as the flow is active.
+    #[test]
+    fn scalar_counters_slide_with_window() {
+        let old_syn = PacketSummary {
+            tcp_flags: Some(TcpFlags {
+                syn: true,
+                ..TcpFlags::default()
+            }),
+            ..sample_tcp_packet(0, 50)
+        };
+        let new_ack = PacketSummary {
+            tcp_flags: Some(TcpFlags {
+                ack: true,
+                ..TcpFlags::default()
+            }),
+            ..sample_tcp_packet(15 * MICROS_PER_SEC, 30)
+        };
+        let key = flow_key_for(&old_syn);
+        let mut counters = SlidingWindowCounters::new(10);
+        counters.record(key.clone(), &old_syn);
+        counters.record(key.clone(), &new_ack);
+
+        assert_eq!(counters.packet_count(&key), 2);
+        assert_eq!(counters.syn_count(&key), 1);
+        assert_eq!(counters.byte_count(&key), 80);
+
+        counters.evict_stale(15 * MICROS_PER_SEC);
+
+        assert_eq!(counters.flow_count(), 1);
+        assert_eq!(counters.packet_count(&key), 1);
+        assert_eq!(counters.syn_count(&key), 0);
+        assert_eq!(counters.ack_count(&key), 1);
+        assert_eq!(counters.byte_count(&key), 30);
     }
 }

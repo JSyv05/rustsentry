@@ -38,7 +38,7 @@ mod tests {
     use crate::test_utils;
 
     use flow::SlidingWindowCounters;
-    use parser::TcpFlags;
+    use parser::{MICROS_PER_SEC, PacketSummary, TcpFlags};
 
     const WINDOW_SECS: u64 = 10;
     const SYN_WITHOUT_ACK_THRESHOLD: u64 = 100;
@@ -256,5 +256,57 @@ mod tests {
         for alert in &alerts {
             assert_ne!(alert.target, otr_ip)
         }
+    }
+
+    // A flood that has aged out of the window must stop alerting, even
+    // though its flow is still active on other traffic.
+    #[test]
+    fn flood_ages_out_of_window() {
+        let clt_ip = test_utils::ip(0);
+        let tgt_ip = test_utils::ip(1);
+
+        let cfg = test_utils::sample_config(
+            WINDOW_SECS,
+            SYN_WITHOUT_ACK_THRESHOLD,
+            DISTINCT_PORTS_THRESHOLD,
+            DUMP_INTERVAL_SECS,
+        );
+
+        let clt_sum = test_utils::sample_tcp_packet(
+            clt_ip,
+            tgt_ip,
+            Some(1),
+            Some(2),
+            Some(TcpFlags {
+                syn: true,
+                ..TcpFlags::default()
+            }),
+        );
+
+        let mut ctr = SlidingWindowCounters::new(cfg.window_secs);
+
+        for _ in 0..cfg.syn_without_ack_threshold {
+            test_utils::record_tcp_packet(&mut ctr, &clt_sum);
+        }
+        assert_eq!(super::check(&ctr, &cfg, 0).len(), 1);
+
+        let later = 20 * MICROS_PER_SEC;
+        let keepalive = PacketSummary {
+            timestamp_micros: later,
+            ..test_utils::sample_tcp_packet(
+                clt_ip,
+                tgt_ip,
+                Some(1),
+                Some(2),
+                Some(TcpFlags {
+                    ack: true,
+                    ..TcpFlags::default()
+                }),
+            )
+        };
+        test_utils::record_tcp_packet(&mut ctr, &keepalive);
+        ctr.evict_stale(later);
+
+        assert!(super::check(&ctr, &cfg, later).is_empty());
     }
 }

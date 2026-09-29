@@ -30,6 +30,14 @@ What gets evaluated, and when it becomes available to evaluate:
 - Capture generated traffic with both RustSentry and `tcpdump` running
   simultaneously, so `tcpdump`'s capture serves as ground truth for what
   attack traffic actually occurred and when.
+- **Lab-network gotcha (see `DECISIONS.md`, 09/28/2026):** on an isolated
+  VirtualBox NatNetwork with no other traffic, libpcap's read timeout
+  doesn't fire until the capture handle has seen at least one packet, so
+  `rustsentry`'s periodic dump/check/evict tick never runs on a fully
+  silent interface. Keep a low-rate background ping running on the target
+  VM for the duration of each capture session (start it before starting
+  `rustsentry`, and before the attack), so detection-latency measurements
+  aren't skewed by however long the interface sat silent beforehand.
 
 ## Benign Traffic Baseline
 
