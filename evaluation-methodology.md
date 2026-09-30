@@ -74,9 +74,6 @@ What gets evaluated, and when it becomes available to evaluate:
   the rule-based detectors' false-positive/true-positive rates on the same
   traffic. This is the strongest evaluation content available and directly
   demonstrates the AI component requirement.
-- If PyTorch is used instead of `linfa` (open question, see `DECISIONS.md`
-  — pinned for Week 9-11), this comparison methodology doesn't change, only
-  the training/inference implementation underneath it.
 
 ## Timeline
 
@@ -89,4 +86,5 @@ What gets evaluated, and when it becomes available to evaluate:
 
 ---
 
-**Advisor sign-off:**  ______________________   **Date:**  ____________
+**Advisor sign-off:**  Approved (signed PDF of this document as of commit
+`8e91081`)   **Date:**  09/29/2026

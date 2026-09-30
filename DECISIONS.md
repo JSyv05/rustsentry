@@ -70,7 +70,8 @@ a paper trail since your advisor is on sabbatical during grading.
   as described in `capstone-plan.md`) — Week 1 sign-off checkpoint complete.
   Note: this covers the proposal specifically; the evaluation methodology
   (Week 2 sign-off checkpoint, see `evaluation-methodology.md`) is a
-  separate approval, still to be confirmed.
+  separate approval, still to be confirmed. (Update: approved 09/29/2026 —
+  see that entry below.)
 - **Why:** The plan calls for written sign-off on the proposal while the
   advisor is still available this semester, ahead of sabbatical, so scope
   can't later be disputed with no one to arbitrate.
@@ -217,3 +218,69 @@ a paper trail since your advisor is on sabbatical during grading.
   progress on genuinely silent interfaces.
 
 ---
+
+- **Date:** 09/29/2026
+- **Decision:** Advisor signed off on `evaluation-methodology.md` and
+  `capstone-plan.md`, submitted as PDF copies of the versions in the repo
+  as of commit `8e91081`. This completes the Week 2 evaluation-methodology
+  checkpoint and the Week 8 Milestone 2 scope checkpoint. Milestone 2
+  itself is complete: both detectors were exercised against simulated
+  attacks (`nmap` port scans, `hping3` SYN floods) in the lab VMs, with
+  `tcpdump` recording ground truth; those captures are still on the VM,
+  pending transfer.
+- **Why:** The plan calls for written sign-off at these checkpoints while
+  the advisor is still available this semester, ahead of sabbatical.
+  Pinning the commit records exactly which version was approved, so any
+  later edits to either document are distinguishable from the signed scope.
+- **Alternatives considered:** N/A — this is a sign-off record, not a scope
+  decision.
+
+---
+
+- **Date:** 09/30/2026
+- **Decision:** Advisor approval of ML as a classifier over a message formatter
+- **Why:** An ML classifier can detect anomalies in a capture that the 
+  algorithm alone could not. Proves ML capabilities in detecting anomalies.
+- **Alternatives considered:** Using an ML alert triage to summarize the capture
+  into a human readable report — rejected for now; it is still a viable option, 
+  but it alone does not prove that ML is a viable option for anomaly detection over the 
+  algorithm alone. Advisor wants us to apply ML and AI to the problem rather than
+  leveraging it to make a minor part of it work differently.
+
+---
+
+- **Date:** 09/30/2026
+- **Decision:** Use Linfa over PyTorch
+- **Why:** Linfa is a simpler, more focused ML library that is easier to integrate with Rust.
+- **Alternatives considered:** Using PyTorch directly — rejected; though I have prior knowledge
+  with PyTorch, it would introduce a level of complexity that simply using Linfa would fix. Linfa
+  is purely Rust, so integration into the project would be easier and less error-prone.
+
+---
+
+- **Date:** 09/30/2026
+- **Decision:** Have Professor Singh -> Sharma -> Sinha grade project in that order if Darwish is not available
+- **Why:** Going in order of preference based on availability and close parallels with existing grading procedures.
+- **Alternatives considered:** N/A: this is a contingency record. To be confirmed and signed off on by the advisor(s).
+
+---
+
+- **Date:** 09/30/2026
+- **Decision:** Scope brute force out for now
+- **Why:** This project is focused on DoS-style attacks and does not require protocol-specific analysis as part of the thesis.
+- **Alternatives considered:** Continue with brute force attacks — rejected for now; Brute force requires application layer 
+  complexity that the application itself would be a better place to handle. This program operates at layers 2-4 
+  (link, network, transport), and implementing detection at layer 7 (the application layer) would constitute creating 
+  protocol-specific analyzers, which exceeds the current scope of this project. To be discussed more with Professor Darwish.
+
+---
+
+- **Date:** 09/30/2026
+- **Decision:** Daemon mode and Webhooks added as part of the project. Priority set to 3 and 4 respectively. reorders current
+  backlog as of 09/29
+- **Why:** Rustsentry is intended to operate on servers, and daemon mode/webhooks are important to server deployment.
+- **Alternatives considered:** Excluding daemon mode — rejected; daemon mode at this point is a low-cost
+  implementation that only requires a clean shutdown process given our previous design choices.
+  Excluding webhooks — rejected for now; Webhooks provide an easy and low-cost way to incorporate real time notifications to a 
+  company ecosystem (Slack for example). Decision can be changed if webhooks prove to be a security vulnerability or if
+  they actively hinder the performance of the program.
