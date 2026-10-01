@@ -284,3 +284,51 @@ a paper trail since your advisor is on sabbatical during grading.
   Excluding webhooks — rejected for now; Webhooks provide an easy and low-cost way to incorporate real time notifications to a 
   company ecosystem (Slack for example). Decision can be changed if webhooks prove to be a security vulnerability or if
   they actively hinder the performance of the program.
+
+---
+
+- **Date:** 10/01/2026
+- **Decision:** Implementing syslog alongside webhooks
+- **Why:** Lots of SIEM software read off of syslogs, so it provides easy
+  integration into that ecosystem. It is a low-cost implementation and
+  it allows direct comparison against software out there (Seek, Suricata).
+---
+
+
+- **Date:** 10/01/2026
+- **Decision:** Dispatch webhook notifications from a background worker
+  thread (fed by a channel, e.g. `std::sync::mpsc`) rather than sending
+  the HTTP request synchronously from inside `tick()`.
+- **Why:** The webhook's own delivery time (network round-trip to Slack/
+  whatever endpoint) is unchanged either way — a background thread doesn't
+  make the HTTP call itself faster. What it fixes is a different risk: a
+  synchronous `POST` inside `tick()` would block packet capture and
+  detection while waiting on that network call, which is exactly the wrong
+  time to stall the pipeline — i.e. during a flood, when the detector is
+  both busiest and most needed. Moving dispatch off the hot path protects
+  capture/detection throughput regardless of how slow or unreliable the
+  webhook endpoint is.
+- **Alternatives considered:** Synchronous dispatch in `tick()` — rejected;
+  head-of-line blocks detection on an external, untrusted endpoint's
+  response time. Pulling in `tokio` plus an async HTTP client — rejected
+  for now; the rest of the pipeline is synchronous, and a full async
+  runtime is a heavy dependency to add for a single outbound call when a
+  plain worker thread does the same job with no architectural change
+  elsewhere. Revisit only if more async I/O (e.g. multiple notification
+  backends) makes the runtime cost worth it.
+
+---
+
+- **Date:** 10/01/2026
+- **Decision:** Not yet decided — how the webhook worker thread should
+  behave when its channel backs up (endpoint down or slow): drop the
+  alert, buffer with a cap, or retry. Open question, to be settled when
+  the worker thread is actually implemented.
+- **Why:** Logged now so the question isn't lost before implementation —
+  raised while scoping the 10/01/2026 background-thread decision above,
+  but not resolved yet.
+- **Alternatives considered:** Drop silently — simplest, but an alert is
+  lost with no record. Bounded buffer, drop oldest/newest on overflow —
+  bounds memory, but still loses alerts under sustained backpressure.
+  Retry with backoff — most complete, but risks the same queue buildup if
+  the endpoint stays down for a while. No option chosen yet.
