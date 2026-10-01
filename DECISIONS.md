@@ -292,6 +292,8 @@ a paper trail since your advisor is on sabbatical during grading.
 - **Why:** Lots of SIEM software read off of syslogs, so it provides easy
   integration into that ecosystem. It is a low-cost implementation and
   it allows direct comparison against software out there (Seek, Suricata).
+- **Alternatives Considered:** Not using syslogs — rejected; no real reason
+  to not include syslogs. Low-cost and helps in demonstration and metrics 
 ---
 
 
