@@ -58,7 +58,6 @@ Pick based on how Phase 2 went. Suggested priority order (do them top-down, stop
 
 | Priority | Feature | Why this order |
 | --- | --- | --- |
-
 | 1 | **ML classifier** (`linfa`) trained on flow features, added as a new `detect` module alongside the rule-based detectors | Satisfies the advisor's AI requirement *and* is your strongest evaluation/differentiation content — do this before anything else in Phase 3. |
 | 2 | **TUI dashboard** (`ratatui`) showing live flow table + alerts | Highest demo value for lowest implementation risk — pure UI work over data you already have. |
 | 3 | **Daemon mode** Have the program run as a service on system start | seamless integration into a server's startup process |
