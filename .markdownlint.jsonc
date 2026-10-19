@@ -1,0 +1,11 @@
+{
+  // MD013 (line-length) is kept on for prose at 80 chars, but GFM tables
+  // and fenced code blocks (e.g. the directory-tree diagram in
+  // capstone-plan.md) can't be wrapped without breaking them, so they're
+  // exempt rather than disabling the rule outright.
+  "MD013": {
+    "line_length": 80,
+    "tables": false,
+    "code_blocks": false
+  }
+}
