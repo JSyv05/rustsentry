@@ -334,3 +334,29 @@ a paper trail since your advisor is on sabbatical during grading.
   bounds memory, but still loses alerts under sustained backpressure.
   Retry with backoff — most complete, but risks the same queue buildup if
   the endpoint stays down for a while. No option chosen yet.
+
+---
+
+- **Date:** 10/19/2026
+- **Decision:** Backtracked off daemon mode/signal-handling work (the
+  `week-10-daemon-mode-ratatui` branch) and returned to `capstone-plan.md`'s
+  original Phase 3 priority order. Picking up with the ML classifier
+  (priority 1 — `linfa`, Weeks 9-11 sub-plan) next, on `week-10-linfa`.
+  Daemon mode (priority 3) and webhooks (priority 4) are deferred back to
+  their original slots rather than being pulled forward. No code was lost
+  in the backtrack — the signal-hook/background-thread work was never
+  committed, so reverting was just abandoning that branch's uncommitted
+  changes.
+- **Why:** The ML classifier is the advisor's AI requirement and the
+  capstone's strongest evaluation/differentiation content — the plan
+  explicitly says to do it "before anything else in Phase 3." Jumping
+  ahead to daemon mode/threading broke that ordering, and ran into a real
+  architectural problem (signal handling can't reliably interrupt a
+  blocked `pcap` read in this environment — see the clean-shutdown
+  debugging in this session) that's better solved later, deliberately,
+  than rushed now out of order.
+- **Alternatives considered:** Finishing daemon mode first since the
+  debugging work was already in progress — rejected; the ML requirement
+  is the higher-stakes deliverable for the capstone, and daemon
+  mode/webhooks don't depend on it, so there's no cost to deferring them
+  back to their planned slots.
